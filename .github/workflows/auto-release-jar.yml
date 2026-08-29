@@ -72,6 +72,4 @@ jobs:
         name: v${{ env.PACK_VERSION }} ${{ env.PACK_DESCRIPTION }}
         make_latest: true
         generate_release_notes: true
-        files: 
-          target/*.jar
-          !target/original-*.jar
+        files: target/${{ env.PACK_DESCRIPTION }}-${{ env.PACK_VERSION }}.jar
