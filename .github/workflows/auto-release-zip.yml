@@ -65,7 +65,7 @@ jobs:
         body: |
           ## Changes in this release
           ${{ env.CHANGELOG }}
-        files: ${{ env.PACK_NAME }}
+        files: ${{ inputs.PACK_NAME }}
       
     # -------------------------------
     # Update "latest" release
@@ -78,5 +78,5 @@ jobs:
         body: |
           ## Latest changes
           ${{ env.CHANGELOG }}
-        files: ${{ env.PACK_NAME }}
+        files: ${{ inputs.PACK_NAME }}
         prerelease: false
