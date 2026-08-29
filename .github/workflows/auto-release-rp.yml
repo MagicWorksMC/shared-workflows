@@ -25,12 +25,12 @@ jobs:
         echo "PACK_DESCRIPTION=$PACK_DESCRIPTION" >> $GITHUB_ENV
 
     - name: Remove old ZIP
-      run: rm -f ${{ env.PACK_NAME }}
+      run: rm -f ${{ inputs.PACK_NAME }}
 
     - name: Archive Release
       uses: thedoctor0/zip-release@0.7.6
       with:
-        filename: ${{ env.PACK_NAME }}
+        filename: ${{ inputs.PACK_NAME }}
         exclusions: '*.git* /*node_modules/* .editorconfig'
 
     - name: Get previous tag
