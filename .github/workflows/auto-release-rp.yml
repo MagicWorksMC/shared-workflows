@@ -1,0 +1,82 @@
+name: Create Release
+on:
+  workflow_call: 
+    inputs:
+      PACK_NAME: 
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source repo
+      uses: actions/checkout@v6.0.2
+      with:
+        fetch-depth: 0  # Fetch full history for changelog generation
+        fetch-tags: true
+
+    - name: Extract version and description from pack.mcmeta
+      run: |
+        PACK_VERSION=$(jq -r '.pack.description' pack.mcmeta | sed -E 's/.*(v[0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+        PACK_DESCRIPTION=$(jq -r '.pack.description' pack.mcmeta | sed -E 's/.*v[0-9]+\.[0-9]+\.[0-9]+(.*)/\1/' | xargs)
+        echo "PACK_VERSION=$PACK_VERSION" >> $GITHUB_ENV
+        echo "PACK_DESCRIPTION=$PACK_DESCRIPTION" >> $GITHUB_ENV
+
+    - name: Remove old ZIP
+      run: rm -f ${{ env.PACK_NAME }}
+
+    - name: Archive Release
+      uses: thedoctor0/zip-release@0.7.6
+      with:
+        filename: ${{ env.PACK_NAME }}
+        exclusions: '*.git* /*node_modules/* .editorconfig'
+
+    - name: Get previous tag
+      id: prev
+      run: |
+        git fetch --tags
+        PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p')
+        echo "PREV_TAG=$PREV_TAG" >> $GITHUB_ENV
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        if [ -z "$PREV_TAG" ]; then
+          LOG=$(git log --pretty=format:"- %s")
+        else
+          LOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
+        fi
+
+        echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+        echo "$LOG" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+
+    # -------------------------------
+    # Create versioned release
+    # -------------------------------
+    - name: Create versioned release
+      uses: softprops/action-gh-release@v3.0.0
+      with:
+        tag_name: ${{ env.PACK_VERSION }}
+        name: ${{env.PACK_VERSION}} ${{ env.PACK_DESCRIPTION }}
+        body: |
+          ## Changes in this release
+          ${{ env.CHANGELOG }}
+        files: ${{ env.PACK_NAME }}
+      
+    # -------------------------------
+    # Update "latest" release
+    # -------------------------------
+    - name: Update latest release
+      uses: softprops/action-gh-release@v3.0.0
+      with:
+        tag_name: latest
+        name: ${{env.PACK_VERSION}} ${{ env.PACK_DESCRIPTION }}
+        body: |
+          ## Latest changes
+          ${{ env.CHANGELOG }}
+        files: ${{ env.PACK_NAME }}
+        prerelease: false
