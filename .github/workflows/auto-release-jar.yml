@@ -1,0 +1,90 @@
+name: Create Release w/ JAR (Maven)
+
+on:
+  workflow_call:
+    inputs:
+      JDK_VERSION:
+        required: false
+        type: string
+        default: '21'
+      POM_PATH:
+        required: false
+        type: string
+        default: 'pom.xml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source repo
+      uses: actions/checkout@v6.0.2
+      with:
+        fetch-depth: 0  # Fetch full history for changelog generation
+        fetch-tags: true
+
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.JDK_VERSION }}
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build JAR with Maven
+      run: mvn -B package --file ${{ inputs.POM_PATH }} -DskipTests
+
+    - name: Extract version and description from pom.xml
+      run: |
+        # Extract version and artifactId/description directly from Maven POM
+        PACK_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout --file ${{ inputs.POM_PATH }})
+        PACK_DESCRIPTION=$(mvn help:evaluate -Dexpression=project.name -q -DforceStdout --file ${{ inputs.POM_PATH }})
+        
+        echo "PACK_VERSION=$PACK_VERSION" >> $GITHUB_ENV
+        echo "PACK_DESCRIPTION=$PACK_DESCRIPTION" >> $GITHUB_ENV
+
+    - name: Get previous tag
+      id: prev
+      run: |
+        git fetch --tags
+        PREV_TAG=$(git tag --sort=-creatordate | sed -n '2p')
+        echo "PREV_TAG=$PREV_TAG" >> $GITHUB_ENV
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        if [ -z "$PREV_TAG" ]; then
+          LOG=$(git log --pretty=format:"- %s")
+        else
+          LOG=$(git log $PREV_TAG..HEAD --pretty=format:"- %s")
+        fi
+
+        echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+        echo "$LOG" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+    # -------------------------------
+    # Create versioned release
+    # -------------------------------
+    - name: Create versioned release
+      uses: softprops/action-gh-release@v3.0.0
+      with:
+        tag_name: v${{ env.PACK_VERSION }}
+        name: v${{ env.PACK_VERSION }} ${{ env.PACK_DESCRIPTION }}
+        body: |
+          ## Changes in this release
+          ${{ env.CHANGELOG }}
+        files: target/*.jar
+
+    # -------------------------------
+    # Update "latest" release
+    # -------------------------------
+    - name: Update latest release
+      uses: softprops/action-gh-release@v3.0.0
+      with:
+        tag_name: latest
+        name: v${{ env.PACK_VERSION }} ${{ env.PACK_DESCRIPTION }}
+        body: |
+          ## Latest changes
+          ${{ env.CHANGELOG }}
+        files: target/*.jar
+        prerelease: false
