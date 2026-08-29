@@ -1,0 +1,50 @@
+name: Update Server Hashes
+on:
+  workflow_call:
+
+jobs:
+  send-command:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 5mins
+        run: sleep 300
+        
+      - name: Send Proxy RCON Command # Send frp generatehashes to proxy server
+        uses: MagicWorksMC/RCON-Action@v0.2.0
+        continue-on-error: true
+        with:
+          server: ${{ secrets.PROXY_HOST }}      # Pulls from org secret
+          port: ${{ secrets.PROXY_RCON_PORT }}        # Pulls from org secret
+          password: ${{ secrets.RCON_PASSWORD }}  # Pulls from org secret
+          send-push-info: false
+          commands: '["frp generatehashes"]'
+          
+      - name: Send Main RCON Command # Send frp generatehashes to main server
+        uses: MagicWorksMC/RCON-Action@v0.2.0
+        continue-on-error: true
+        with:
+          server: ${{ secrets.MWPC_HOST }}      # Pulls from org secret
+          port: ${{ secrets.MAIN_RCON_PORT }}        # Pulls from org secret
+          password: ${{ secrets.RCON_PASSWORD }}  # Pulls from org secret
+          send-push-info: false
+          commands: '["frp generatehashes"]'
+          
+      - name: Send Staff RCON Command # Send frp generatehashes to staff server
+        uses: MagicWorksMC/RCON-Action@v0.2.0
+        continue-on-error: true
+        with:
+          server: ${{ secrets.MWPC_HOST }}      # Pulls from org secret
+          port: ${{ secrets.STAFF_RCON_PORT }}        # Pulls from org secret
+          password: ${{ secrets.RCON_PASSWORD }}  # Pulls from org secret
+          send-push-info: false
+          commands: '["frp generatehashes"]'
+          
+      - name: Send Creative RCON Command # Send frp generatehashes to creative server
+        uses: MagicWorksMC/RCON-Action@v0.2.0
+        continue-on-error: true
+        with:
+          server: ${{ secrets.CREATIVE_HOST }}      # Pulls from org secret
+          port: ${{ secrets.CREATIVE_RCON_PORT }}        # Pulls from org secret
+          password: ${{ secrets.RCON_PASSWORD }}  # Pulls from org secret
+          send-push-info: false
+          commands: '["frp generatehashes"]'
